@@ -1,71 +1,167 @@
+"use client";
+
+import { FormEvent, useState } from "react";
+
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
 export default function Home() {
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      role: "assistant",
+      content:
+        "I am Eli's Digital Twin. Ask me about Eli's career, leadership experience, cloud architecture work, or AI journey.",
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
   const careerJourney = [
     {
-      period: "2024 - Present",
+      period: "February 2024 - Present",
       role: "Solutions and Infrastructure Architect",
       company: "NICE Actimize",
       summary:
-        "Architecting enterprise-scale, cloud and AI solutions across AWS and Azure while driving technical direction and pre-sales strategy.",
+        "Designing large-scale, data-intensive cloud (AWS/Azure) and AI solutions, while leading technical direction, requirement validation, and pre-sales architecture.",
     },
     {
-      period: "2020 - 2024",
-      role: "CTO & Co-Founder",
+      period: "December 2020 - January 2024",
+      role: "CTO and Co-Founder",
       company: "Stratos",
       summary:
-        "Built a Kubernetes-driven platform that automated enterprise system evolution and reduced development lifecycle costs.",
+        "Co-founded Stratos Systems and built a Kubernetes-driven platform that automated enterprise system generation and evolution, reducing development lifecycle cost and time-to-market.",
     },
     {
-      period: "2019 - 2020",
+      period: "September 2019 - December 2020",
       role: "R&D Manager - Leumi Mind",
       company: "Bank Leumi",
       summary:
-        "Led modernization initiatives focused on replacing legacy banking infrastructure with robust digital systems.",
+        "Led the flagship Leumi Mind modernization initiative focused on replacing mainframe banking systems with modern software architecture.",
     },
     {
-      period: "2017 - 2019",
+      period: "October 2017 - September 2019",
       role: "Software & DevOps Engineer",
       company: "KYC Station",
       summary:
-        "Developed fintech products using big data and machine learning to improve customer screening quality.",
+        "Built fintech solutions using big data and machine learning to deliver high-quality customer screening for banking organizations.",
     },
     {
-      period: "2014 - 2017",
+      period: "May 2014 - September 2017",
       role: "CTO & R&D Manager",
       company: "DAN-EL Financial Solutions",
       summary:
-        "Directed R&D for an all-in-one investment management platform adopted by leading financial institutions in Israel.",
+        "Directed R&D for an all-in-one investment management platform adopted by 15 of the 20 largest financial institutions in Israel.",
     },
     {
-      period: "2012 - 2014",
-      role: "CTO & Co-Founder",
+      period: "March 2012 - April 2014",
+      role: "CTO and Co-Founder",
       company: "SpotWise",
       summary:
-        "Built a SaaS customer feedback platform that turned smartphone data into real-time customer experience insights.",
+        "Built a SaaS platform collecting smartphone feedback and turning it into real-time, actionable customer experience insights.",
     },
     {
-      period: "2009 - 2012",
+      period: "January 2009 - March 2012",
       role: "Founder",
       company: "Copycat Software Solutions",
       summary:
-        "Delivered actionable intelligence systems globally, including large project delivery as a Verint subcontractor.",
+        "Founded and delivered actionable intelligence solutions globally, including more than 20 successful projects as a Verint subcontractor.",
     },
     {
-      period: "2000 - 2009",
+      period: "February 2000 - January 2009",
       role: "Developer, R&D Manager & Group Leader",
       company: "Comverse Technology",
       summary:
-        "Advanced from engineering to leadership while building telecom software at global scale.",
+        "Progressed from engineering to leadership while delivering telecom software at global scale in a world-leading voice mail provider.",
     },
   ];
 
   const capabilities = [
+    "Vibe Coding",
+    "Large Language Models (LLM) & Agentic AI",
     "Enterprise Architecture",
     "Cloud Transformation (AWS, GCP, Azure)",
-    "Agentic AI & LLM Systems",
-    "Kubernetes & Platform Engineering",
-    "DevOps Strategy & Delivery",
-    "Technical Leadership & Pre-Sales",
+    "Kubernetes, Docker, Helm & Terraform",
+    "Technical Leadership, DevOps & Pre-Sales",
   ];
+
+  const handsOnStack = [
+    "Technologies: Kubernetes, Docker, Helm, Terraform, Microservices, Kafka, Redis, MongoDB, Elasticsearch, Nginx, Spark, SQL",
+    "Languages & Frameworks: Python, Java, C#, C++, Scala, JavaScript, Spring Boot, Node.js, .NET Core, Angular",
+    "Cloud & OS: AWS, GCP, Azure, Linux, Mac, Windows, Android",
+    "Tools: Git, Bitbucket, Jira, Confluence, CircleCI, Team System, Slack",
+  ];
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const question = input.trim();
+    if (!question || isLoading) {
+      return;
+    }
+
+    setError("");
+    setInput("");
+
+    const nextMessages: ChatMessage[] = [
+      ...messages,
+      { role: "user", content: question },
+    ];
+    setMessages(nextMessages);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/digital-twin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ messages: nextMessages }),
+      });
+
+      const payload: unknown = await response.json();
+      const answer =
+        typeof payload === "object" &&
+        payload !== null &&
+        "answer" in payload &&
+        typeof payload.answer === "string"
+          ? payload.answer
+          : null;
+
+      if (!response.ok || !answer) {
+        const detail =
+          typeof payload === "object" &&
+          payload !== null &&
+          "error" in payload &&
+          typeof payload.error === "string"
+            ? payload.error
+            : "The Digital Twin is currently unavailable.";
+
+        throw new Error(detail);
+      }
+
+      setMessages((current) => [...current, { role: "assistant", content: answer }]);
+    } catch (submitError) {
+      const message =
+        submitError instanceof Error
+          ? submitError.message
+          : "Could not reach the Digital Twin.";
+
+      setError(message);
+      setMessages((current) => [
+        ...current,
+        {
+          role: "assistant",
+          content:
+            "I could not answer right now because the model connection failed. Please try again in a moment.",
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   return (
     <main className="site-shell">
@@ -75,19 +171,20 @@ export default function Home() {
       <section className="hero reveal">
         <p className="eyebrow">ELI MALKA</p>
         <h1>
-          Enterprise Precision.
+          CTO.
           <br />
-          Edgy Innovation.
+          Vibe Coder.
         </h1>
         <p className="hero-copy">
-          Co-Founder, CTO, Vibe Architect, and Agentic Coder based in Israel.
-          I design scalable cloud and AI systems that turn deep technical
-          complexity into measurable business outcomes.
+          I am Eli Malka, Co-Founder, CTO, Vibe Architect, and Agentic Coder
+          based in Israel. I design and implement scalable cloud and AI
+          architectures, translating deep technical complexity into secure,
+          resilient, and business-aligned outcomes.
         </p>
         <div className="hero-actions">
           <a
             className="btn btn-primary"
-            href="http://www.linkedin.com/in/elimalka"
+            href="https://www.linkedin.com/in/elimalka"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -112,15 +209,15 @@ export default function Home() {
         <article className="panel reveal">
           <h2>About Me</h2>
           <p>
-            I am a technology evangelist with hands-on depth in architecture,
-            cloud platforms, and engineering execution. My career has been
-            defined by building secure, resilient systems and guiding teams to
-            deliver ambitious products with clarity and speed.
+            My professional journey is defined by technological excellence and
+            innovation. I bring hands-on depth and strategic vision in
+            architecture, cloud initiatives, development leadership, and DevOps
+            execution.
           </p>
           <p>
-            Across AWS, GCP, Azure, Kubernetes, and modern software stacks, I
-            focus on practical innovation: elegant architecture, robust
-            operations, and AI-enabled acceleration.
+            I have led cloud migrations and implementations across AWS and GCP,
+            and I design robust, scalable, and secure enterprise systems with a
+            practical, outcomes-first approach.
           </p>
           <p>
             <strong>Education:</strong> B.A, Chemistry &amp; Physics, The Hebrew
@@ -129,15 +226,65 @@ export default function Home() {
         </article>
 
         <article className="panel reveal">
-          <h2>Portfolio</h2>
+          <h2>Hands-on Knowledge</h2>
+          {handsOnStack.map((item) => (
+            <p key={item}>{item}</p>
+          ))}
           <p>
-            A dedicated portfolio section is coming soon and will include case
-            studies, architecture snapshots, and product stories.
+            Contact: <a href="mailto:eli.malka.mail@gmail.com">eli.malka.mail@gmail.com</a>
           </p>
-          <a className="portfolio-link" href="#" aria-disabled="true">
-            Portfolio Launching Soon
+          <a
+            className="portfolio-link"
+            href="https://www.linkedin.com/in/elimalka"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            LinkedIn Profile
           </a>
         </article>
+      </section>
+
+      <section className="panel reveal chat-panel" id="digital-twin">
+        <p className="eyebrow">DIGITAL TWIN</p>
+        <h2>Ask AI About Eli&apos;s Career</h2>
+        <p className="chat-intro">
+          This assistant answers using Eli&apos;s profile details and experience.
+        </p>
+
+        <div className="chat-log" aria-live="polite">
+          {messages.map((message, index) => (
+            <article
+              className={`chat-message ${message.role}`}
+              key={`${message.role}-${index}`}
+            >
+              <p className="chat-role">
+                {message.role === "assistant" ? "Digital Twin" : "You"}
+              </p>
+              <p>{message.content}</p>
+            </article>
+          ))}
+        </div>
+
+        <form className="chat-form" onSubmit={handleSubmit}>
+          <label className="chat-label" htmlFor="career-question">
+            Ask a question
+          </label>
+          <textarea
+            id="career-question"
+            className="chat-input"
+            placeholder="Example: What cloud platforms has Eli led projects on?"
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            rows={3}
+            disabled={isLoading}
+            required
+          />
+          <button className="btn btn-primary chat-submit" type="submit" disabled={isLoading}>
+            {isLoading ? "Thinking..." : "Ask Digital Twin"}
+          </button>
+        </form>
+
+        {error ? <p className="chat-error">{error}</p> : null}
       </section>
 
       <section className="journey reveal" id="career-journey">
@@ -158,7 +305,7 @@ export default function Home() {
       </section>
 
       <footer className="footer reveal">
-        <p>Built with Next.js. Designed to evolve with future portfolio work.</p>
+        <p>Built with Next.js. Updated from latest professional profile details.</p>
       </footer>
     </main>
   );
